@@ -903,7 +903,7 @@ function wireCoach(scn){
   go.addEventListener("click",async function(){
     var ans=(ta.value||"").trim();
     if(ans.length<8){out.innerHTML='<div class="coach-msg">Write a fuller answer to the prompt first.</div>';return;}
-    if(!getKey()){out.innerHTML='<div class="coach-msg">No API key yet. Open <b>Path → AI coach</b> and paste your Anthropic key once (it stays on this device).</div>';return;}
+    if(!isLocalCoach()&&!getKey()){out.innerHTML='<div class="coach-msg">No API key yet. Open <b>Path → AI coach</b> and paste your Anthropic key once (it stays on this device).</div>';return;}
     go.disabled=true;go.textContent="Coaching…";out.innerHTML='<div class="coach-msg">Reading your answer…</div>';
     try{var f=await evaluateAnswer(scn,ans);out.innerHTML=fbHTML(f);}
     catch(err){
@@ -916,8 +916,10 @@ function wireCoach(scn){
     finally{go.disabled=false;go.textContent="Evaluate my answer →";}
   });
 }
+function isLocalCoach(){return location.protocol==="http:"&&(location.hostname==="localhost"||location.hostname==="127.0.0.1");}
 async function evaluateAnswer(scn,answer){
-  var key=getKey();if(!key)throw {t:"nokey"};
+  var local=isLocalCoach();
+  var key=local?"":getKey();if(!local&&!key)throw {t:"nokey"};
   var sys="You are an executive English coach for a Korean Head of Corporate Operations at a game company. "+
     "He already has functional business English; your job is to push him toward native executive register — precise, confident, natural. "+
     "Grade his spoken answer to a role-play prompt. Be direct and specific, no flattery, no filler. "+
@@ -930,15 +932,25 @@ async function evaluateAnswer(scn,answer){
     "tip (one focused habit, one sentence). "+
     "Korean is allowed inside 'issue' and 'tip' for clarity; keep 'better' and 'executive' in English.";
   var user="PROMPT: "+scn.q+"\nFOLLOW-UPS HE MUST HANDLE: "+scn.fu.join(" / ")+"\nTARGET LEVEL: "+(scn.diff||scn.lvl)+"\n\nHIS SPOKEN ANSWER:\n"+answer;
-  var res=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-    body:JSON.stringify({model:COACH_MODEL,max_tokens:1400,system:sys,messages:[{role:"user",content:user}]})
-  });
-  if(res.status===401)throw {t:"badkey"};
-  if(!res.ok){var et="";try{et=await res.text();}catch(e){}throw {t:"http",m:res.status+" "+et.slice(0,160)};}
-  var data=await res.json();
-  var txt=(data.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("");
+  var txt;
+  if(local){
+    /* Mac: local proxy shells `claude -p` on the Claude Code subscription — no API key, no metered billing */
+    var lr=await fetch("/evaluate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({system:sys,user:user})});
+    if(!lr.ok){var le="";try{le=await lr.text();}catch(e){}throw {t:"http",m:lr.status+" "+le.slice(0,160)};}
+    var ld=await lr.json();
+    if(ld.error)throw {t:"http",m:String(ld.error).slice(0,160)};
+    txt=ld.text||"";
+  }else{
+    var res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:COACH_MODEL,max_tokens:1400,system:sys,messages:[{role:"user",content:user}]})
+    });
+    if(res.status===401)throw {t:"badkey"};
+    if(!res.ok){var et="";try{et=await res.text();}catch(e){}throw {t:"http",m:res.status+" "+et.slice(0,160)};}
+    var data=await res.json();
+    txt=(data.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("");
+  }
   var a=txt.indexOf("{"),z=txt.lastIndexOf("}");
   if(a<0||z<0)throw {t:"parse",m:txt.slice(0,160)};
   return JSON.parse(txt.slice(a,z+1));
@@ -1042,7 +1054,9 @@ function addCardModal(){
   });
 }
 (function(){var ki=document.getElementById("keyIn"),ks=document.getElementById("keySave"),st=document.getElementById("keyState");if(!ki||!ks||!st)return;
-  function refl(){var k=getKey();st.innerHTML=k?'✓ Key saved on this device ('+esc(maskKey(k))+') · <a href="#" id="keyClr">remove</a>':'No key yet — AI coach is off.';var c=document.getElementById("keyClr");if(c)c.addEventListener("click",function(e){e.preventDefault();setKey("");ki.value="";refl();toast("Key removed");});}
+  function refl(){
+    if(isLocalCoach()){st.innerHTML='🖥️ Running on your Mac via the Claude Code subscription — no API key needed here.';ki.closest(".key-row").style.display="none";return;}
+    var k=getKey();st.innerHTML=k?'✓ Key saved on this device ('+esc(maskKey(k))+') · <a href="#" id="keyClr">remove</a>':'No key yet — AI coach is off.';var c=document.getElementById("keyClr");if(c)c.addEventListener("click",function(e){e.preventDefault();setKey("");ki.value="";refl();toast("Key removed");});}
   ks.addEventListener("click",function(){var v=(ki.value||"").trim();if(!v){toast("Paste a key first");return;}setKey(v);ki.value="";refl();toast("Key saved · AI coach on 🤖");});
   refl();
 })();
