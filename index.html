@@ -235,6 +235,29 @@
   .prompt-box .q{font-family:var(--disp);font-weight:600;font-size:17px;line-height:1.35;margin-top:7px;text-wrap:balance}
   .followups{margin-top:12px} .followups .lab{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--speak);font-weight:700;margin-bottom:6px}
   .followups li{list-style:none;font-size:13.5px;padding:7px 11px;background:var(--card);border:1px solid var(--line);border-radius:9px;margin-bottom:6px;line-height:1.4}
+  .coach{margin-top:16px;border-top:1px dashed var(--line);padding-top:15px}
+  .coach-h{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;font-weight:700;color:var(--signal-ink)}
+  .coach-h .coach-sub{font-family:var(--body);font-weight:400;font-size:11.5px;letter-spacing:0;color:var(--graphite);text-transform:none;line-height:1.4}
+  .coach-in{width:100%;box-sizing:border-box;margin-top:11px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 12px;font-family:inherit;font-size:14px;line-height:1.45;color:var(--ink);resize:vertical}
+  .coach-go{width:100%;margin-top:10px}
+  .coach-msg{margin-top:12px;font-size:13px;color:var(--graphite);line-height:1.5}
+  .coach-msg.err{color:var(--speak)}
+  .fb{margin-top:14px;display:flex;flex-direction:column;gap:13px}
+  .fb-top{display:flex;align-items:center;justify-content:space-between;background:var(--signal-soft);border-radius:12px;padding:11px 14px}
+  .fb-band{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--signal-ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .fb-score .tnum{font-family:var(--disp);font-weight:700;font-size:24px}
+  .fb-score small{color:var(--graphite);font-size:12px;margin-left:1px}
+  .fb-h{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:7px}
+  .fb-h.ok{color:var(--ok)} .fb-h.fix{color:var(--speak)} .fb-h.exec{color:var(--signal-ink)}
+  .fb-line{font-size:13.5px;line-height:1.45;padding:2px 0}
+  .fb-fix{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .fb-fix .fx-i{font-size:12.5px;color:var(--graphite);margin-bottom:5px;line-height:1.4}
+  .fb-fix .fx-y{font-size:13.5px;color:var(--speak);line-height:1.4}
+  .fb-fix .fx-b{font-size:13.5px;color:var(--ink);font-weight:600;line-height:1.4;margin-top:3px}
+  .fb-exec{background:var(--signal-soft);border-radius:11px;padding:12px 13px;font-size:14px;line-height:1.5;font-family:var(--disp)}
+  .fb-tip{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:13.5px;line-height:1.45}
+  .key-row{display:flex;gap:8px}
+  .key-in{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:13px;color:var(--ink)}
   .rateN{display:flex;gap:7px;justify-content:center;margin-top:6px}
   .rateN button{width:42px;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--card);font-family:var(--disp);font-weight:700;font-size:16px;transition:.12s} .rateN button:hover{border-color:var(--signal);color:var(--signal-ink)}
 
@@ -347,6 +370,12 @@
       <div id="baseRec"></div>
     </div>
     <div class="base" id="baseList" style="margin-top:12px"></div>
+    <div class="sec-t">AI coach<span class="ln"></span><span class="n">optional</span></div>
+    <div class="card pad">
+      <p class="note" style="margin-bottom:10px">Paste your <b>Anthropic API key</b> once to unlock AI feedback on your Speak answers. It stays <b>only on this device</b> — never uploaded, never in exports. Get a key at <b>console.anthropic.com</b>.</p>
+      <div class="key-row"><input type="password" id="keyIn" class="key-in" placeholder="sk-ant-..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn sm" id="keySave">Save</button></div>
+      <div class="note" id="keyState" style="margin-top:9px"></div>
+    </div>
     <div class="sec-t">Manage<span class="ln"></span></div>
     <div class="btn-row"><button class="btn sm" id="exportBtn">⤓ Export progress</button><button class="btn sm" id="importBtn">⤒ Import</button><button class="btn sm" id="resetBtn">Reset all</button></div>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
@@ -847,11 +876,81 @@ function openScenario(idx){
   var s=SCENARIOS[idx];
   openModal('<h2>'+esc(s.title)+'</h2><div class="sub">'+s.lvl+' · Phase '+s.ph+'</div>'+scenarioHTML(s)+
     '<button class="btn lst sm" id="scnHear" style="margin-top:12px">🎧 Hear the prompt</button>'+
-    '<div style="margin-top:16px" id="scnRec"></div><div class="tap-hint" style="text-align:left;margin:14px 0 8px">Rate your rep — how fluent did that feel?</div>'+
+    '<div style="margin-top:16px" id="scnRec"></div>'+coachHTML()+
+    '<div class="tap-hint" style="text-align:left;margin:14px 0 8px">Rate your rep — how fluent did that feel?</div>'+
     '<div class="rateN" id="scnRate">'+[1,2,3,4,5].map(function(n){return '<button data-r="'+n+'">'+n+'</button>';}).join("")+'</div>');
   document.getElementById("scnHear").addEventListener("click",function(){stopSpeak();speak(s.q,{rate:0.95});});
   mountRecorder(document.getElementById("scnRec"),{compact:true,hint:"Optional — record your answer and listen back for filler words and hesitation."});
+  wireCoach(s);
   document.querySelectorAll("#scnRate button").forEach(function(b){b.addEventListener("click",function(){S.speak++;persist();closeModal();renderSpeak();renderHeader();toast("Rep logged · self-rated "+b.getAttribute("data-r")+"/5 🎙️");});});
+}
+
+/* ---- AI coach (BYO key, stays on this device) ---- */
+var AK="english-os:anthropic-key";
+var COACH_MODEL="claude-opus-4-8"; /* swap to "claude-sonnet-5" for cheaper reps */
+function getKey(){try{return localStorage.getItem(AK)||"";}catch(e){return "";}}
+function setKey(v){try{if(v)localStorage.setItem(AK,v);else localStorage.removeItem(AK);}catch(e){}}
+function maskKey(k){return k?k.slice(0,7)+"…"+k.slice(-4):"";}
+function coachHTML(){
+  return '<div class="coach"><div class="coach-h">🤖 AI coach<span class="coach-sub">Say your answer out loud, then type it (or tap the 🎤 on your keyboard to dictate) and get executive-level feedback.</span></div>'+
+    '<textarea id="coachIn" class="coach-in" rows="4" placeholder="Type or dictate your full spoken answer here…"></textarea>'+
+    '<button class="btn coach-go" id="coachGo">Evaluate my answer →</button>'+
+    '<div id="coachOut"></div></div>';
+}
+function wireCoach(scn){
+  var go=document.getElementById("coachGo"),out=document.getElementById("coachOut"),ta=document.getElementById("coachIn");
+  if(!go)return;
+  go.addEventListener("click",async function(){
+    var ans=(ta.value||"").trim();
+    if(ans.length<8){out.innerHTML='<div class="coach-msg">Write a fuller answer to the prompt first.</div>';return;}
+    if(!getKey()){out.innerHTML='<div class="coach-msg">No API key yet. Open <b>Path → AI coach</b> and paste your Anthropic key once (it stays on this device).</div>';return;}
+    go.disabled=true;go.textContent="Coaching…";out.innerHTML='<div class="coach-msg">Reading your answer…</div>';
+    try{var f=await evaluateAnswer(scn,ans);out.innerHTML=fbHTML(f);}
+    catch(err){
+      var m=err&&err.t==="badkey"?"That API key was rejected (401). Re-check it in Path → AI coach.":
+            err&&err.t==="nokey"?"No API key set — add it in Path → AI coach.":
+            err&&err.t==="parse"?"Got a reply but couldn't read it — tap Evaluate again.":
+            "Couldn't reach the coach ("+((err&&err.m)||"network / CORS")+"). Check your connection and key.";
+      out.innerHTML='<div class="coach-msg err">'+esc(m)+'</div>';
+    }
+    finally{go.disabled=false;go.textContent="Evaluate my answer →";}
+  });
+}
+async function evaluateAnswer(scn,answer){
+  var key=getKey();if(!key)throw {t:"nokey"};
+  var sys="You are an executive English coach for a Korean Head of Corporate Operations at a game company. "+
+    "He already has functional business English; your job is to push him toward native executive register — precise, confident, natural. "+
+    "Grade his spoken answer to a role-play prompt. Be direct and specific, no flattery, no filler. "+
+    "Return ONLY a JSON object (no markdown, no prose) with keys: "+
+    "band (CEFR estimate of THIS answer, one of A2/B1/B2/C1/C1+), "+
+    "score (integer 0-100), "+
+    "strengths (array of 1-2 short strings), "+
+    "fixes (array of 2-4 objects, each {issue, you, better}: 'you' quotes his wording, 'better' is the upgraded phrasing), "+
+    "executive (his whole answer rewritten in polished executive register), "+
+    "tip (one focused habit, one sentence). "+
+    "Korean is allowed inside 'issue' and 'tip' for clarity; keep 'better' and 'executive' in English.";
+  var user="PROMPT: "+scn.q+"\nFOLLOW-UPS HE MUST HANDLE: "+scn.fu.join(" / ")+"\nTARGET LEVEL: "+(scn.diff||scn.lvl)+"\n\nHIS SPOKEN ANSWER:\n"+answer;
+  var res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:COACH_MODEL,max_tokens:1400,system:sys,messages:[{role:"user",content:user}]})
+  });
+  if(res.status===401)throw {t:"badkey"};
+  if(!res.ok){var et="";try{et=await res.text();}catch(e){}throw {t:"http",m:res.status+" "+et.slice(0,160)};}
+  var data=await res.json();
+  var txt=(data.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("");
+  var a=txt.indexOf("{"),z=txt.lastIndexOf("}");
+  if(a<0||z<0)throw {t:"parse",m:txt.slice(0,160)};
+  return JSON.parse(txt.slice(a,z+1));
+}
+function fbHTML(f){
+  var band=esc(f.band||"?"),score=(typeof f.score==="number"?f.score:parseInt(f.score,10))||0;
+  var h='<div class="fb"><div class="fb-top"><span class="fb-band">'+band+'</span><div class="fb-score"><span class="tnum">'+score+'</span><small>/100</small></div></div>';
+  if(f.strengths&&f.strengths.length)h+='<div class="fb-sec"><div class="fb-h ok">✓ Working</div>'+f.strengths.map(function(s){return '<div class="fb-line">'+esc(s)+'</div>';}).join("")+'</div>';
+  if(f.fixes&&f.fixes.length){h+='<div class="fb-sec"><div class="fb-h fix">△ Upgrade these</div>';f.fixes.forEach(function(x){h+='<div class="fb-fix">'+(x.issue?'<div class="fx-i">'+esc(x.issue)+'</div>':"")+(x.you?'<div class="fx-y">❌ '+esc(x.you)+'</div>':"")+(x.better?'<div class="fx-b">✅ '+esc(x.better)+'</div>':"")+'</div>';});h+='</div>';}
+  if(f.executive)h+='<div class="fb-sec"><div class="fb-h exec">◆ Executive version</div><div class="fb-exec">'+esc(f.executive)+'</div></div>';
+  if(f.tip)h+='<div class="fb-tip">🎯 '+esc(f.tip)+'</div>';
+  return h+'</div>';
 }
 
 /* ---- PROGRESS ---- */
@@ -942,6 +1041,11 @@ function addCardModal(){
     persist();closeModal();renderPhrases();renderHeader();toast("Phrase added ✓");
   });
 }
+(function(){var ki=document.getElementById("keyIn"),ks=document.getElementById("keySave"),st=document.getElementById("keyState");if(!ki||!ks||!st)return;
+  function refl(){var k=getKey();st.innerHTML=k?'✓ Key saved on this device ('+esc(maskKey(k))+') · <a href="#" id="keyClr">remove</a>':'No key yet — AI coach is off.';var c=document.getElementById("keyClr");if(c)c.addEventListener("click",function(e){e.preventDefault();setKey("");ki.value="";refl();toast("Key removed");});}
+  ks.addEventListener("click",function(){var v=(ki.value||"").trim();if(!v){toast("Paste a key first");return;}setKey(v);ki.value="";refl();toast("Key saved · AI coach on 🤖");});
+  refl();
+})();
 document.getElementById("exportBtn").addEventListener("click",function(){var blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="english-os-"+todayStr()+".json";a.click();toast("Progress exported ⤓");});
 document.getElementById("importBtn").addEventListener("click",function(){document.getElementById("importFile").click();});
 document.getElementById("importFile").addEventListener("change",function(e){
